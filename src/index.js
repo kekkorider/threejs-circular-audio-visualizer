@@ -252,12 +252,12 @@ class App {
     })
 
     tl
-      .to(['#audio-icon', '#audio-btn'], {
+      .to(['.audio-icon', '#audio-btn'], {
         opacity: 0,
         stagger: 0.25,
         duration: 0.85,
         onComplete: () => {
-          gsap.set(['#audio-icon', '#audio-btn'], { display: 'none' })
+          gsap.set(['.audio-icon', '#audio-btn'], { display: 'none' })
         }
       })
       .to(this.camera.position, {
