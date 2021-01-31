@@ -62,3 +62,20 @@ body {
   font-size: 140%;
   visibility: hidden;
 }
+
+#credits {
+  color: white;
+  left: 0;
+  letter-spacing: 0.07em;
+  line-height: 1.5;
+  margin: 0;
+  position: fixed;
+  padding: 30px;
+  top: 0;
+  width: 100%;
+  z-index: 20;
+
+  a {
+    color: inherit;
+  }
+}
