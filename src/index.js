@@ -11,7 +11,11 @@ import {
   Vector3,
   Euler,
   Quaternion,
-  AdditiveBlending
+  AdditiveBlending,
+  Audio,
+  AudioListener,
+  AudioLoader,
+  AudioAnalyser
 } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { InstancedUniformsMesh } from 'three-instanced-uniforms-mesh'
@@ -22,7 +26,7 @@ import gsap from 'gsap'
 class App {
   constructor(container) {
     this.container = document.querySelector(container)
-    this.volume = { value: 0.75 }
+    this.volume = { value: 0 }
 
     this._resizeCb = () => this._onResize()
   }
@@ -31,12 +35,12 @@ class App {
     this._createScene()
     this._createCamera()
     this._createRenderer()
-    // this._createTorus()
     this._createToruses()
     this._createClock()
+    this._loadMusic()
     this._addListeners()
     this._createControls()
-    this._createDebugPanel()
+    // this._createDebugPanel()
 
     this.renderer.setAnimationLoop(() => {
       this._update()
@@ -57,6 +61,12 @@ class App {
     this._updateToruses(elapsed)
 
     this.instancedTorus.material.uniforms.uTime.value = elapsed
+
+    if (!!this.analyser) {
+      const freq = this.analyser.getAverageFrequency()
+      this.volume.value = freq * 0.8
+      this.instancedTorus.material.uniforms.uDistortionPower.value = freq * 0.1
+    }
   }
 
   _render() {
@@ -69,7 +79,7 @@ class App {
 
   _createCamera() {
     this.camera = new PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 1000)
-    this.camera.position.set(0, 30, 150)
+    this.camera.position.set(0, 50, 250)
   }
 
   _createRenderer() {
@@ -97,7 +107,7 @@ class App {
   }
 
   _createToruses() {
-    const geometry = new TorusGeometry(5, 0.1, 8, 90)
+    const geometry = new TorusGeometry(5, 0.1, 8, 180)
     geometry.rotateX(Math.PI*0.5)
 
     const material = this._createMaterial()
@@ -113,23 +123,29 @@ class App {
     const matrix = new Matrix4()
 
     for (let i = 0; i < this.instancedTorus.count; i++) {
+      const isEven = i % 2 === 0 ? 1 : -1
+
+      // Set odd indices to have the value of the previous index.
+      // Used to place two instances in the same place.
+      const fakeIndex = i - i%2
+
       const position = new Vector3()
 			const rotation = new Euler()
 			const quaternion = new Quaternion()
       const scale = new Vector3()
 
       // Loops from 0.5 to count+0.5 to do per-instance calculations
-      const t = gsap.utils.wrap(0.5, this.instancedTorus.count + 0.5, i + time)
+      const t = gsap.utils.wrap(0.5, this.instancedTorus.count + 0.5, fakeIndex + time)
 
       // Normalize `t`
       const tNorm = gsap.utils.normalize(0.5, this.instancedTorus.count + 0.5, t)
 
       // position.x = Math.random() * 20 - 10
-      position.y += (1 - tNorm) * this.volume.value * 80
+      position.y += 0.1*isEven + (1 - tNorm) * this.volume.value * isEven
       // position.z = Math.random() * 20 - 10
 
       // rotation.x = Math.PI * 2 * t * (Math.PI / 180)
-      // rotation.y = Math.random() * 2 * Math.PI
+      rotation.y = (Math.PI / 180) * time * 10 * isEven
       // rotation.z = Math.PI * t * (Math.PI / 180)
 
       quaternion.setFromEuler(rotation)
@@ -156,13 +172,31 @@ class App {
       blending: AdditiveBlending,
       uniforms: {
         uTime: { value: 0 },
-        uDistortionPower: { value: 1 },
-        uDistortion: { value: 1 },
+        uDistortionPower: { value: 0 },
+        uDistortion: { value: 0 },
         uProgress: { value: 0 }
       },
       defines: {
-        NUM_INSTANCES: 20
+        NUM_INSTANCES: 40
       }
+    })
+  }
+
+  _loadMusic() {
+    const audioListener = new AudioListener()
+    this.camera.add(audioListener)
+
+    const music = new Audio(audioListener)
+    this.scene.add(music)
+
+    const loader = new AudioLoader()
+    loader.load('/music.mp3', audioBuffer => {
+      music.setBuffer(audioBuffer)
+      music.setLoop(true)
+      music.setVolume(0.1)
+      music.play()
+
+      this.analyser = new AudioAnalyser(music, 32)
     })
   }
 
