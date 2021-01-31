@@ -10,7 +10,8 @@ import {
   Matrix4,
   Vector3,
   Euler,
-  Quaternion
+  Quaternion,
+  AdditiveBlending
 } from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { InstancedUniformsMesh } from 'three-instanced-uniforms-mesh'
@@ -21,6 +22,7 @@ import gsap from 'gsap'
 class App {
   constructor(container) {
     this.container = document.querySelector(container)
+    this.volume = { value: 0.75 }
 
     this._resizeCb = () => this._onResize()
   }
@@ -67,7 +69,7 @@ class App {
 
   _createCamera() {
     this.camera = new PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 1000)
-    this.camera.position.set(0, 1, 10)
+    this.camera.position.set(0, 30, 150)
   }
 
   _createRenderer() {
@@ -116,25 +118,30 @@ class App {
 			const quaternion = new Quaternion()
       const scale = new Vector3()
 
+      // Loops from 0.5 to count+0.5 to do per-instance calculations
       const t = gsap.utils.wrap(0.5, this.instancedTorus.count + 0.5, i + time)
 
+      // Normalize `t`
+      const tNorm = gsap.utils.normalize(0.5, this.instancedTorus.count + 0.5, t)
+
       // position.x = Math.random() * 20 - 10
-      // position.y = Math.random() * 20 - 10
+      position.y += (1 - tNorm) * this.volume.value * 80
       // position.z = Math.random() * 20 - 10
 
-      rotation.x = Math.PI * 2 * t * (Math.PI / 180)
+      // rotation.x = Math.PI * 2 * t * (Math.PI / 180)
       // rotation.y = Math.random() * 2 * Math.PI
-      rotation.z = Math.PI * t * (Math.PI / 180)
+      // rotation.z = Math.PI * t * (Math.PI / 180)
 
       quaternion.setFromEuler(rotation)
 
-      scale.x = scale.z = t
-      scale.y = 1 + t * 0.05
+      scale.x = scale.z = t * 2
+      scale.y = 1 + t
 
       matrix.compose(position, quaternion, scale)
 
       this.instancedTorus.setMatrixAt(i, matrix)
-      this.instancedTorus.setUniformAt('uAlpha', i, t)
+      this.instancedTorus.setUniformAt('uProgress', i, tNorm)
+      this.instancedTorus.setUniformAt('uDistortion', i, tNorm)
 
       this.instancedTorus.instanceMatrix.needsUpdate = true
     }
@@ -145,14 +152,16 @@ class App {
       vertexShader: require('./shaders/sample.vertex.glsl'),
       fragmentShader: require('./shaders/sample.fragment.glsl'),
       transparent: true,
-      wireframe: true,
+      wireframe: false,
+      blending: AdditiveBlending,
       uniforms: {
         uTime: { value: 0 },
         uDistortionPower: { value: 1 },
-        uAlpha: { value: 0 }
+        uDistortion: { value: 1 },
+        uProgress: { value: 0 }
       },
       defines: {
-        NUM_INSTANCES: 30
+        NUM_INSTANCES: 20
       }
     })
   }
@@ -180,7 +189,14 @@ class App {
      */
     const torusFolder = this.pane.addFolder({ title: 'Torus' })
 
-    torusFolder.addInput(this.instancedTorus.material.uniforms.uDistortionPower, 'value', { label: 'Distortion', min: 0, max: 5 })
+    torusFolder.addInput(this.instancedTorus.material.uniforms.uDistortionPower, 'value', { label: 'Distortion Power', min: 0, max: 5 })
+
+    /**
+     * Torus configuration
+     */
+    const audioFolder = this.pane.addFolder({ title: 'Audio' })
+
+    audioFolder.addInput(this.volume, 'value', { label: 'Volume', min: 0, max: 1 })
   }
 
   _createClock() {

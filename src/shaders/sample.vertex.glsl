@@ -2,6 +2,7 @@ varying vec2 vUv;
 
 uniform float uTime;
 uniform float uDistortionPower;
+uniform float uDistortion;
 
 mat2 rotate(float angle) {
   return mat2(
@@ -20,7 +21,8 @@ void main() {
   // float distortionPower = uDistortionPower * smoothstep(0.3, 1.7, animProgress);
 
   // super mega turbo distortion
-  pos.y += (sin(pos.x*8. + uTime)*0.2 * cos(pos.z*5. + uTime)*2. + sin(pos.x*3. - uTime)*0.5 - cos(pos.z*17. + uTime)*0.1) * uDistortionPower;
+  float distortion = smoothstep(0.2, 1.0, 1.0 - uDistortion);
+  pos.y += (sin(pos.x*8. + uTime)*0.2 * cos(pos.z*5. + uTime)*2. + sin(pos.x*3. - uTime)*0.5 - cos(pos.z*17. + uTime)*0.1) * distortion * uDistortionPower;
 
   vec4 mvPosition = vec4(pos, 1.0 );
   mvPosition = instanceMatrix * mvPosition;
