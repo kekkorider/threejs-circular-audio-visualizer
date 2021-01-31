@@ -27,6 +27,7 @@ class App {
   constructor(container) {
     this.container = document.querySelector(container)
     this.volume = { value: 0 }
+    this.meshRotation = { x: 0, y: 0, z: 0 }
 
     this._resizeCb = () => this._onResize()
   }
@@ -37,9 +38,8 @@ class App {
     this._createRenderer()
     this._createToruses()
     this._createClock()
-    this._loadMusic()
     this._addListeners()
-    this._createControls()
+    // this._createControls()
     // this._createDebugPanel()
 
     this.renderer.setAnimationLoop(() => {
@@ -62,6 +62,12 @@ class App {
 
     this.instancedTorus.material.uniforms.uTime.value = elapsed
 
+    this.camera.lookAt(this.instancedTorus.position)
+
+    this.instancedTorus.rotation.x += 0.005 * this.meshRotation.x
+    this.instancedTorus.rotation.y += 0.005 * this.meshRotation.y
+    this.instancedTorus.rotation.z += 0.005 * this.meshRotation.z
+
     if (!!this.analyser) {
       const freq = this.analyser.getAverageFrequency()
       this.volume.value = freq * 0.8
@@ -79,7 +85,7 @@ class App {
 
   _createCamera() {
     this.camera = new PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 1000)
-    this.camera.position.set(0, 50, 250)
+    this.camera.position.set(0, 20, 100)
   }
 
   _createRenderer() {
@@ -107,7 +113,7 @@ class App {
   }
 
   _createToruses() {
-    const geometry = new TorusGeometry(5, 0.1, 8, 180)
+    const geometry = new TorusGeometry(5, 0.1, 6, 90)
     geometry.rotateX(Math.PI*0.5)
 
     const material = this._createMaterial()
@@ -141,7 +147,7 @@ class App {
       const tNorm = gsap.utils.normalize(0.5, this.instancedTorus.count + 0.5, t)
 
       // position.x = Math.random() * 20 - 10
-      position.y += 0.1*isEven + (1 - tNorm) * this.volume.value * isEven
+      position.y += 0.3*isEven - (1 - tNorm) * this.volume.value * isEven
       // position.z = Math.random() * 20 - 10
 
       // rotation.x = Math.PI * 2 * t * (Math.PI / 180)
@@ -183,20 +189,28 @@ class App {
   }
 
   _loadMusic() {
-    const audioListener = new AudioListener()
-    this.camera.add(audioListener)
+    return new Promise(resolve => {
+      const progressCount = document.querySelector('#progress-count')
 
-    const music = new Audio(audioListener)
-    this.scene.add(music)
+      const audioListener = new AudioListener()
+      this.camera.add(audioListener)
 
-    const loader = new AudioLoader()
-    loader.load('/music.mp3', audioBuffer => {
-      music.setBuffer(audioBuffer)
-      music.setLoop(true)
-      music.setVolume(0.1)
-      music.play()
+      const music = new Audio(audioListener)
+      this.scene.add(music)
 
-      this.analyser = new AudioAnalyser(music, 32)
+      const loader = new AudioLoader()
+      loader.load('/music.mp3', audioBuffer => {
+        music.setBuffer(audioBuffer)
+        music.setLoop(true)
+        music.setVolume(0.1)
+        music.play()
+
+        this.analyser = new AudioAnalyser(music, 32)
+
+        resolve()
+      }, ({ loaded, total }) => {
+        progressCount.textContent = `${parseInt(loaded / total * 100)}%`
+      })
     })
   }
 
@@ -218,19 +232,60 @@ class App {
       this.renderer.setClearColor(new Color(value.r / 255, value.g / 255, value.b / 255))
     })
 
+    sceneFolder.addInput(this.meshRotation, 'x', { label: 'RotX', min: -1, max: 1 })
+    sceneFolder.addInput(this.meshRotation, 'y', { label: 'RotY', min: -1, max: 1 })
+    sceneFolder.addInput(this.meshRotation, 'z', { label: 'RotZ', min: -1, max: 1 })
+
     /**
      * Torus configuration
      */
     const torusFolder = this.pane.addFolder({ title: 'Torus' })
 
     torusFolder.addInput(this.instancedTorus.material.uniforms.uDistortionPower, 'value', { label: 'Distortion Power', min: 0, max: 5 })
+    torusFolder.addInput(this.volume, 'value', { label: 'Volume', min: 0, max: 1 })
+  }
 
-    /**
-     * Torus configuration
-     */
-    const audioFolder = this.pane.addFolder({ title: 'Audio' })
+  _runIntroAnimation() {
+    const tl = new gsap.timeline({
+      onComplete: () => this._loadMusic()
+                          .then(() => this._runLoopingAnimation())
+    })
 
-    audioFolder.addInput(this.volume, 'value', { label: 'Volume', min: 0, max: 1 })
+    tl
+      .to(['#audio-icon', '#audio-btn'], {
+        opacity: 0,
+        stagger: 0.25,
+        duration: 0.85,
+        onComplete: () => {
+          gsap.set(['#audio-icon', '#audio-btn'], { display: 'none' })
+        }
+      })
+      .to(this.camera.position, {
+        duration: 3,
+        y: 10,
+        z: 550,
+      }, '<0.5')
+      .to('#progress', { autoAlpha: 1, duration: 0.6 })
+  }
+
+  _runLoopingAnimation() {
+    const tl = new gsap.timeline({
+      repeat: -1,
+      yoyo: true,
+      onStart: () => {
+        gsap.to(this.meshRotation, {
+          duration: 7,
+          x: 0.74,
+          y: 0.9,
+          z: -0.4
+        })
+
+        gsap.to('#prompt', { autoAlpha: 0, duration: 1 })
+      }
+    })
+
+    tl
+      .to(this.camera.position, { duration: 10, z: 350 })
   }
 
   _createClock() {
@@ -239,6 +294,10 @@ class App {
 
   _addListeners() {
     window.addEventListener('resize', this._resizeCb, { passive: true })
+
+    document.querySelector('#audio-btn').addEventListener('click', () => {
+      this._runIntroAnimation()
+    }, { once: true })
   }
 
   _removeListeners() {
