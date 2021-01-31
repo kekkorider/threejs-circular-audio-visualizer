@@ -2641,6 +2641,11 @@ grapheme-breaker@^0.3.2:
     brfs "^1.2.0"
     unicode-trie "^0.3.1"
 
+gsap@^3.6.0:
+  version "3.6.0"
+  resolved "https://registry.yarnpkg.com/gsap/-/gsap-3.6.0.tgz#925f25370c698ce0f6ea563522da8f6b5ed21b0a"
+  integrity sha512-0P3syv1TmYr+A/VZ8UMFzw+s0XoaKSzzDFs8NqkXiJTXI4E/VTi0zRjPgxaPBpiUPPycgRnFjLDe0Tb4dRRf+w==
+
 har-schema@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/har-schema/-/har-schema-2.0.0.tgz#a94c2224ebcac04782a0d9035521f24735b7ec92"
@@ -5055,10 +5060,17 @@ terser@^4.8.0:
     source-map "~0.6.1"
     source-map-support "~0.5.12"
 
-three@^0.123.0:
-  version "0.123.0"
-  resolved "https://registry.yarnpkg.com/three/-/three-0.123.0.tgz#3bb6d8f908a432eb7cd450f7eab6dd40fde53085"
-  integrity sha512-KNnx/IbilvoHRkxOtL0ouozoDoElyuvAXhFB21RK7F5IPWSmqyFelICK6x3hJerLNSlAdHxR0hkuvMMhH9pqXg==
+three-instanced-uniforms-mesh@^0.38.0:
+  version "0.38.0"
+  resolved "https://registry.yarnpkg.com/three-instanced-uniforms-mesh/-/three-instanced-uniforms-mesh-0.38.0.tgz#49ee7f3bba23a5ff0d8f4c2343397d198bc094d6"
+  integrity sha512-wfgvPyU6wtDzaiGhoDsfmKdoN7fOF5ySdiiVvB43o5Dtc1ljJCLsJ/fEIHwOa0nBm+xzxhsQLOrAy4jLcfnpow==
+  dependencies:
+    troika-three-utils "^0.38.0"
+
+three@^0.125.0:
+  version "0.125.2"
+  resolved "https://registry.yarnpkg.com/three/-/three-0.125.2.tgz#dcba12749a2eb41522e15212b919cd3fbf729b12"
+  integrity sha512-7rIRO23jVKWcAPFdW/HREU2NZMGWPBZ4XwEMt0Ak0jwLUKVJhcKM55eCBWyGZq/KiQbeo1IeuAoo/9l2dzhTXA==
 
 through2@^0.6.3:
   version "0.6.5"
@@ -5159,6 +5171,11 @@ tr46@^1.0.1:
   integrity sha1-qLE/1r/SSJUZZ0zN5VujaTtwbQk=
   dependencies:
     punycode "^2.1.0"
+
+troika-three-utils@^0.38.0:
+  version "0.38.0"
+  resolved "https://registry.yarnpkg.com/troika-three-utils/-/troika-three-utils-0.38.0.tgz#e52e57e4cfd958ff2fb48aa4ee480f9150abb9e3"
+  integrity sha512-+CjCJC74qu+jh6FvYNno1aDR/47umxtRV6zRhaep5bfXTWXFcyVIEkLqS+Ly5+kvFCDyH5PkS+rkUQnsaDmEsw==
 
 tty-browserify@0.0.0:
   version "0.0.0"

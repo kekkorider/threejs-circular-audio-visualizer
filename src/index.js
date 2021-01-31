@@ -1,19 +1,22 @@
-import { Scene } from 'three/src/scenes/Scene'
-import { WebGLRenderer } from 'three/src/renderers/WebGLRenderer'
-import { PerspectiveCamera } from 'three/src/cameras/PerspectiveCamera'
-import { BoxBufferGeometry } from 'three/src/geometries/BoxBufferGeometry'
-import { MeshStandardMaterial } from 'three/src/materials/MeshStandardMaterial'
-import { ShaderMaterial } from 'three/src/materials/ShaderMaterial'
-import { Mesh } from 'three/src/objects/Mesh'
-import { PointLight } from 'three/src/lights/PointLight'
-import { Color } from 'three/src/math/Color'
+import {
+  Scene,
+  WebGLRenderer,
+  PerspectiveCamera,
+  TorusGeometry,
+  ShaderMaterial,
+  Mesh,
+  Color,
+  Clock,
+  Matrix4,
+  Vector3,
+  Euler,
+  Quaternion
+} from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-
-// Remove this if you don't need to load any 3D model
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
+import { InstancedUniformsMesh } from 'three-instanced-uniforms-mesh'
 
 import Tweakpane from 'tweakpane'
+import gsap from 'gsap'
 
 class App {
   constructor(container) {
@@ -26,19 +29,19 @@ class App {
     this._createScene()
     this._createCamera()
     this._createRenderer()
-    this._createBox()
-    this._createShadedBox()
-    this._createLight()
+    // this._createTorus()
+    this._createToruses()
+    this._createClock()
     this._addListeners()
     this._createControls()
     this._createDebugPanel()
 
-    this._loadModel().then(() => {
-      this.renderer.setAnimationLoop(() => {
-        this._update()
-        this._render()
-      })
+    this.renderer.setAnimationLoop(() => {
+      this._update()
+      this._render()
     })
+
+    console.log(this)
   }
 
   destroy() {
@@ -47,11 +50,11 @@ class App {
   }
 
   _update() {
-    this.box.rotation.y += 0.01
-    this.box.rotation.z += 0.006
+    const elapsed = this.clock.getElapsedTime()
 
-    this.shadedBox.rotation.y += 0.01
-    this.shadedBox.rotation.z += 0.006
+    this._updateToruses(elapsed)
+
+    this.instancedTorus.material.uniforms.uTime.value = elapsed
   }
 
   _render() {
@@ -63,8 +66,8 @@ class App {
   }
 
   _createCamera() {
-    this.camera = new PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 100)
-    this.camera.position.set(-4, 4, 10)
+    this.camera = new PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 1000)
+    this.camera.position.set(0, 1, 10)
   }
 
   _createRenderer() {
@@ -78,92 +81,79 @@ class App {
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight)
     this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio))
     this.renderer.setClearColor(0x121212)
-    this.renderer.gammaOutput = true
     this.renderer.physicallyCorrectLights = true
   }
 
-  _createLight() {
-    this.pointLight = new PointLight(0xff0055, 500, 100, 2)
-    this.pointLight.position.set(0, 10, 13)
-    this.scene.add(this.pointLight)
+  _createTorus() {
+    const geometry = new TorusGeometry(5, 0.1, 16, 180)
+    geometry.rotateX(Math.PI*0.5)
+    const material = this._createMaterial()
+
+    this.torus = new Mesh(geometry, material)
+
+    this.scene.add(this.torus)
   }
 
-  /**
-   * Create a box with a PBR material
-   */
-  _createBox() {
-    const geometry = new BoxBufferGeometry(1, 1, 1, 1, 1, 1)
+  _createToruses() {
+    const geometry = new TorusGeometry(5, 0.1, 8, 90)
+    geometry.rotateX(Math.PI*0.5)
 
-    const material = new MeshStandardMaterial({ color: 0xffffff })
+    const material = this._createMaterial()
 
-    this.box = new Mesh(geometry, material)
+    this.instancedTorus = new InstancedUniformsMesh(geometry, material, material.defines.NUM_INSTANCES)
 
-    this.box.scale.x = 4
-    this.box.scale.y = 4
-    this.box.scale.z = 4
+    this._updateToruses()
 
-    this.box.position.x = -5
-
-    this.scene.add(this.box)
+    this.scene.add(this.instancedTorus)
   }
 
-  /**
-   * Create a box with a custom ShaderMaterial
-   */
-  _createShadedBox() {
-    const geometry = new BoxBufferGeometry(1, 1, 1, 1, 1, 1)
+  _updateToruses(time = 0) {
+    const matrix = new Matrix4()
 
-    const material = new ShaderMaterial({
+    for (let i = 0; i < this.instancedTorus.count; i++) {
+      const position = new Vector3()
+			const rotation = new Euler()
+			const quaternion = new Quaternion()
+      const scale = new Vector3()
+
+      const t = gsap.utils.wrap(0.5, this.instancedTorus.count + 0.5, i + time)
+
+      // position.x = Math.random() * 20 - 10
+      // position.y = Math.random() * 20 - 10
+      // position.z = Math.random() * 20 - 10
+
+      rotation.x = Math.PI * 2 * t * (Math.PI / 180)
+      // rotation.y = Math.random() * 2 * Math.PI
+      rotation.z = Math.PI * t * (Math.PI / 180)
+
+      quaternion.setFromEuler(rotation)
+
+      scale.x = scale.z = t
+      scale.y = 1 + t * 0.05
+
+      matrix.compose(position, quaternion, scale)
+
+      this.instancedTorus.setMatrixAt(i, matrix)
+      this.instancedTorus.setUniformAt('uAlpha', i, t)
+
+      this.instancedTorus.instanceMatrix.needsUpdate = true
+    }
+  }
+
+  _createMaterial() {
+    return new ShaderMaterial({
       vertexShader: require('./shaders/sample.vertex.glsl'),
       fragmentShader: require('./shaders/sample.fragment.glsl'),
-      transparent: true
-    })
-
-    this.shadedBox = new Mesh(geometry, material)
-
-    this.shadedBox.scale.x = 4
-    this.shadedBox.scale.y = 4
-    this.shadedBox.scale.z = 4
-
-    this.shadedBox.position.x = 5
-
-    this.scene.add(this.shadedBox)
-  }
-
-  /**
-   * Load a 3D model and append it to the scene
-   */
-  _loadModel() {
-    return new Promise(resolve => {
-      this.loader = new GLTFLoader()
-
-      const dracoLoader = new DRACOLoader()
-      dracoLoader.setDecoderPath('/')
-
-      this.loader.setDRACOLoader(dracoLoader)
-
-      this.loader.load('./model.glb', gltf => {
-        const mesh = gltf.scene.children[0]
-
-        mesh.scale.x = 4
-        mesh.scale.y = 4
-        mesh.scale.z = 4
-
-        mesh.position.z = 5
-
-        const material = new ShaderMaterial({
-          vertexShader: require('./shaders/sample.vertex.glsl'),
-          fragmentShader: require('./shaders/sample.fragment.glsl'),
-          transparent: true,
-          wireframe: true
-        })
-
-        mesh.material = material
-
-        this.scene.add(mesh)
-
-        resolve()
-      })
+      transparent: true,
+      wireframe: true,
+      uniforms: {
+        uTime: { value: 0 },
+        uDistortionPower: { value: 1 },
+        uAlpha: { value: 0 }
+      },
+      defines: {
+        NUM_INSTANCES: 30
+      }
     })
   }
 
@@ -182,57 +172,19 @@ class App {
     let params = { background: { r: 18, g: 18, b: 18 } }
 
     sceneFolder.addInput(params, 'background', { label: 'Background Color' }).on('change', value => {
-      this.renderer.setClearColor(new Color(`rgb(${parseInt(value.r)}, ${parseInt(value.g)}, ${parseInt(value.b)})`))
+      this.renderer.setClearColor(new Color(value.r / 255, value.g / 255, value.b / 255))
     })
 
     /**
-     * Box configuration
+     * Torus configuration
      */
-    const boxFolder = this.pane.addFolder({ title: 'Box' })
+    const torusFolder = this.pane.addFolder({ title: 'Torus' })
 
-    params = { width: 4, height: 4, depth: 4, metalness: 0.5, roughness: 0.5 }
+    torusFolder.addInput(this.instancedTorus.material.uniforms.uDistortionPower, 'value', { label: 'Distortion', min: 0, max: 5 })
+  }
 
-    boxFolder.addInput(params, 'width', { label: 'Width', min: 1, max: 8 })
-      .on('change', value => {
-        this.box.scale.x = value
-        this.shadedBox.scale.x = value
-      })
-
-    boxFolder.addInput(params, 'height', { label: 'Height', min: 1, max: 8 })
-      .on('change', value => {
-        this.box.scale.y = value
-        this.shadedBox.scale.y = value
-      })
-
-    boxFolder.addInput(params, 'depth', { label: 'Depth', min: 1, max: 8 })
-      .on('change', value => {
-        this.box.scale.z = value
-        this.shadedBox.scale.z = value
-      })
-
-    boxFolder.addInput(params, 'metalness', { label: 'Metallic', min: 0, max: 1 })
-      .on('change', value => this.box.material.metalness = value)
-
-    boxFolder.addInput(params, 'roughness', { label: 'Roughness', min: 0, max: 1 })
-      .on('change', value => this.box.material.roughness = value)
-
-    /**
-     * Light configuration
-     */
-    const lightFolder = this.pane.addFolder({ title: 'Light' })
-
-    params = {
-      color: { r: 255, g: 0, b: 85 },
-      intensity: 500
-    }
-
-    lightFolder.addInput(params, 'color', { label: 'Color' }).on('change', value => {
-      this.pointLight.color = new Color(`rgb(${parseInt(value.r)}, ${parseInt(value.g)}, ${parseInt(value.b)})`)
-    })
-
-    lightFolder.addInput(params, 'intensity', { label: 'Intensity', min: 0, max: 1000 }).on('change', value => {
-      this.pointLight.intensity = value
-    })
+  _createClock() {
+    this.clock = new Clock()
   }
 
   _addListeners() {
