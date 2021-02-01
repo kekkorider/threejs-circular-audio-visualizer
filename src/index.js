@@ -207,6 +207,15 @@ class App {
 
         this.analyser = new AudioAnalyser(music, 32)
 
+        gsap.to(this.meshRotation, {
+          duration: 7,
+          x: 0.74,
+          y: 0.9,
+          z: -0.4
+        })
+
+        gsap.to('#prompt', { autoAlpha: 0, duration: 1 })
+
         resolve()
       }, ({ loaded, total }) => {
         progressCount.textContent = `${parseInt(loaded / total * 100)}%`
@@ -246,46 +255,36 @@ class App {
   }
 
   _runIntroAnimation() {
-    const tl = new gsap.timeline({
-      onComplete: () => this._loadMusic()
-                          .then(() => this._runLoopingAnimation())
-    })
+    const tl = new gsap.timeline()
 
     tl
       .to(['.audio-icon', '#audio-btn'], {
         opacity: 0,
         stagger: 0.25,
-        duration: 0.85,
+        duration: 0.75,
         onComplete: () => {
           gsap.set(['.audio-icon', '#audio-btn'], { display: 'none' })
         }
       })
+      .to('#progress', { autoAlpha: 1, duration: 0.6 }, '>')
+      .call(() => {
+        this._loadMusic().then(() => this._runLoopingAnimation())
+      }, null, '<')
       .to(this.camera.position, {
         duration: 3,
         y: 10,
         z: 550,
-      }, '<0.5')
-      .to('#progress', { autoAlpha: 1, duration: 0.6 })
+      }, '<')
   }
 
   _runLoopingAnimation() {
     const tl = new gsap.timeline({
       repeat: -1,
-      yoyo: true,
-      onStart: () => {
-        gsap.to(this.meshRotation, {
-          duration: 7,
-          x: 0.74,
-          y: 0.9,
-          z: -0.4
-        })
-
-        gsap.to('#prompt', { autoAlpha: 0, duration: 1 })
-      }
+      yoyo: true
     })
 
     tl
-      .to(this.camera.position, { duration: 10, z: 350 })
+      .to(this.camera.position, { duration: 10, z: 350, overwrite: true })
   }
 
   _createClock() {

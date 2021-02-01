@@ -65,16 +65,25 @@ body {
 }
 
 #credits {
+  background: rgb(18,18,18);
+  background: -moz-linear-gradient(180deg, rgba(18,18,18,1) 0%, rgba(18,18,18,0.4990371148459384) 65%, rgba(18,18,18,0) 95%);
+  background: -webkit-linear-gradient(180deg, rgba(18,18,18,1) 0%, rgba(18,18,18,0.4990371148459384) 65%, rgba(18,18,18,0) 95%);
+  background: linear-gradient(180deg, rgba(18,18,18,1) 0%, rgba(18,18,18,0.4990371148459384) 65%, rgba(18,18,18,0) 95%);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr="#121212",endColorstr="#121212",GradientType=1);
   color: white;
   left: 0;
   letter-spacing: 0.07em;
   line-height: 1.5;
   margin: 0;
   position: fixed;
-  padding: 30px;
+  padding: 12px 16px 30px;
   top: 0;
   width: 100%;
   z-index: 20;
+
+  @media (min-width: 767px) {
+    padding: 16px 24px 40px;
+  }
 
   a {
     color: inherit;
